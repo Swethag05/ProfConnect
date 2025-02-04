@@ -1,0 +1,19 @@
+/* General header styles */
+.header {
+    position: sticky; /* Makes the header sticky */
+    top: 0;
+    z-index: 1000; /* Ensures it stays above other content */
+    background-color: white; /* Background color for header */
+    display: flex;
+    justify-content: center; /* Centers the logo horizontally */
+    align-items: center; /* Centers the logo vertically */
+    padding: 10px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); /* Adds a shadow for better visibility */
+  }
+  
+  /* Logo styling */
+  .header-logo {
+    height: 60px; /* Adjust the logo height as needed */
+    object-fit: contain; /* Ensures the image maintains its aspect ratio */
+  }
+  
