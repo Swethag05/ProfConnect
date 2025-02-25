@@ -70,25 +70,43 @@ const getFacultyProfile = async (req, res) => {
     }
 };
 
-// Faculty Adds Course
-const addCourse = async (req, res) => {
+const getFilteredCourses = async (req, res) => {
     try {
-        const { facultyId } = req.params;
-        const { courseId } = req.body;
+        const { batch } = req.params;
+        const { department, semester } = req.query; // Get query parameters
 
-        if (!facultyId || !courseId) {
-            return res.status(400).json({ success: false, message: "Faculty ID and Course ID are required!" });
+        let sql = "SELECT * FROM Courses WHERE batch = ? AND faculty_id IS NULL";
+        let values = [batch];
+
+        if (department) {
+            sql += " AND department = ?";
+            values.push(department);
         }
 
-        const checkSql = "SELECT faculty_id FROM Courses WHERE id = ?";
-        const existingCourse = await query(checkSql, [courseId]);
-
-        if (existingCourse.length > 0 && existingCourse[0].faculty_id) {
-            return res.status(400).json({ success: false, message: "Course already assigned to another faculty!" });
+        if (semester) {
+            sql += " AND semester = ?";
+            values.push(semester);
         }
 
-        const updateSql = "UPDATE Courses SET faculty_id = ? WHERE id = ?";
-        await query(updateSql, [facultyId, courseId]);
+        const courses = await query(sql, values);
+
+        res.json({ success: true, courses });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+const assignCourseToFaculty = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { facultyId } = req.body;
+
+        if (!facultyId) {
+            return res.status(400).json({ success: false, message: "Faculty ID is required!" });
+        }
+
+        // Assign the faculty to the course
+        const sql = "UPDATE Courses SET faculty_id = ? WHERE id = ?";
+        await query(sql, [facultyId, courseId]);
 
         return res.json({ success: true, message: "Course assigned successfully!" });
     } catch (error) {
@@ -96,7 +114,10 @@ const addCourse = async (req, res) => {
     }
 };
 
-// Get Faculty's Courses
+
+
+
+
 const getMyCourses = async (req, res) => {
     try {
         const { facultyId } = req.params;
@@ -105,7 +126,8 @@ const getMyCourses = async (req, res) => {
             return res.status(400).json({ success: false, message: "Faculty ID is required!" });
         }
 
-        const sql = "SELECT * FROM Courses WHERE faculty_id = ?";
+        const sql = "SELECT * FROM courses WHERE faculty_id = ?";
+        
         const courses = await query(sql, [facultyId]);
 
         return res.json({ success: true, courses });
@@ -113,5 +135,70 @@ const getMyCourses = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+const getEnrolledStudents = async (req, res) => {
+    const { courseId } = req.params;
 
-module.exports = { loginFaculty, getFacultyProfile, addCourse, getMyCourses };
+    if (!courseId) {
+        return res.status(400).json({ success: false, message: "Course ID is required." });
+    }
+
+    try {
+        const query = `
+            SELECT students.reg_no, students.name
+            FROM enrollments
+            JOIN students ON enrollments.student_id = students.id
+            WHERE enrollments.course_id = ?;
+        `;
+
+        db.query(query, [courseId], (err, results) => {
+            if (err) {
+                console.error("Error fetching enrolled students:", err);
+                return res.status(500).json({ success: false, message: "Database error" });
+            }
+
+            res.status(200).json({ success: true, students: results });
+        });
+    } catch (error) {
+        console.error("Error fetching students:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
+};
+const enrollStudentInCourse = async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { reg_no } = req.body;
+
+        if (!reg_no) {
+            return res.status(400).json({ success: false, message: "Student registration number is required!" });
+        }
+
+        // Check if the student exists
+        const studentQuery = "SELECT * FROM students WHERE reg_no = ?";
+        const students = await query(studentQuery, [reg_no]);
+
+        if (students.length === 0) {
+            return res.status(404).json({ success: false, message: "Student not found!" });
+        }
+
+        const studentId = students[0].id;
+
+        // Check if the student is already enrolled
+        const checkEnrollmentQuery = "SELECT * FROM enrollments WHERE student_id = ? AND course_id = ?";
+        const enrollmentResult = await query(checkEnrollmentQuery, [studentId, courseId]);
+
+        if (enrollmentResult.length > 0) {
+            return res.status(400).json({ success: false, message: "Student is already enrolled in this course!" });
+        }
+
+        // Enroll the student in the course
+        const enrollQuery = "INSERT INTO enrollments (student_id, course_id) VALUES (?, ?)";
+        await query(enrollQuery, [studentId, courseId]);
+
+        return res.json({ success: true, message: "Student enrolled successfully!" });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+module.exports = { loginFaculty, getFacultyProfile, getFilteredCourses, getMyCourses ,assignCourseToFaculty,getEnrolledStudents,enrollStudentInCourse};
+

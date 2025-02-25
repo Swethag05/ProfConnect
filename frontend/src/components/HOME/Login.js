@@ -37,7 +37,20 @@ const Login = () => {
           setError(data.message || "Invalid credentials!");
         }
       } else if (role === "Student") {
-        alert("Student login not implemented yet!");
+        const response=await fetch("http://localhost:5000/api/student/login",{
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reg_no: regNo, dob }),
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert("Student Login Successful ✅");
+          localStorage.setItem("student", JSON.stringify(data));
+          navigate("/student-dashboard"); // Redirect to faculty dashboard
+        } else {
+          setError(data.message || "Invalid credentials!");
+        }
+
       }
     } catch (err) {
       setError("Network error! Please try again later.");
@@ -82,4 +95,3 @@ const Login = () => {
 };
 
 export default Login;
-

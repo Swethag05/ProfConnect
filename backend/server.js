@@ -1,13 +1,16 @@
 const express = require("express");
-const cors = require("cors"); // Import CORS
-const facultyRoutes = require("./routes/facultyRoutes"); // Import Faculty Routes
+const cors = require("cors");
+const facultyRoutes = require("./routes/facultyRoutes"); // ✅ Correct import
+const studentRoutes = require("./routes/studentRoutes"); // ✅ Correct import
 
 const app = express();
-app.use(cors()); // Enable CORS to prevent frontend connection issues
-app.use(express.json()); // Allow JSON body parsing
+app.use(cors());
+app.use(express.json());
 
-app.use("/api/faculty", facultyRoutes); // Mount faculty routes
+// Use the faculty routes correctly
+app.use("/api/faculty", facultyRoutes); 
 
-const PORT = process.env.PORT || 5000;
+app.use("/api/student", studentRoutes); 
+
+const PORT = 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-app.use("/uploads", express.static("uploads"));
